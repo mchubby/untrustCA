@@ -12,12 +12,15 @@ import urllib2
 import re
 import subprocess
 
+#exename = r"certutil"
+exename = r"C:\EXTRACT\NSS-3.14.2\NSS-3.14.2\certutil.exe"
+
 
 if len(sys.argv) > 1:
     PROFILEDIR = sys.argv[1]
 else:
-    defaults = glob.glob(os.path.expanduser("~/.mozilla/firefox/*default"))
-    if len(defaults) == 1:
+    defaults = glob.glob(os.path.join(os.getenv('APPDATA'), "Mozilla/Firefox/Profiles/*default")) if sys.platform.startswith("win") else glob.glob(os.path.expanduser("~/.mozilla/firefox/*default"))
+    if len(defaults) >= 1:
         PROFILEDIR = defaults[0]
         sys.stderr.write("using default Firefox profile %s\n" % PROFILEDIR)
     else:
@@ -36,16 +39,20 @@ def get_CA_names():
     for line in f:
         m = re.search(pattern, line)
         if m:
+            #print line
             yield m.group(1)
 
 def revoke_trust():
     for name in get_CA_names():
         try:
-            print name
-            subprocess.call(['certutil', '-A', '-n', name,
-                             '-t', 'c,c,c', '-d', PROFILEDIR])
+            #print name
+            #subprocess.call(['certutil', '-A', '-n', name,
+            #                 '-t', 'c,c,c', '-d', PROFILEDIR])
+            print '%s -M -n "Builtin Object Token:%s" -t p,p,p -d %s' % (exename, name, PROFILEDIR)
+            #subprocess.call([exename, '-M', '-n', 'Builtin Object Token:%s' % name, '-t', 'p,p,p', '-d', PROFILEDIR])
         except OSError:
             sys.stderr.write("Could not edit FF cert file; is libnss3-tools installed?")
             sys.exit(1)
+    sys.stderr.write('List CA:\n%s -L -h "Builtin Object Token" -d %s' % (exename, PROFILEDIR))
 
 revoke_trust()
